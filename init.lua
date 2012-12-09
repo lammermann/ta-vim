@@ -44,7 +44,31 @@ function M.use_vim_modes(keys)
     end
     return val
   end
-  
+ 
+  M.multiply = ''
+
+  -- perform `action` for `M.multiply` times
+  local function multiply_action(action, ...)
+    local n = tonumber(M.multiply) or 1
+    M.multiply = ''
+    while n > 0 do
+      action(...)
+      n = n-1
+    end
+  end
+
+  local function append_multiply_buffer(number)
+    M.multiply = M.multiply .. number
+  end
+
+  local function add_multiply_bindings(mode)
+    modes[mode].keys['esc'] = function() M.multiply='' end
+    for i = 0, 9 do
+      number = tostring(i)
+      modes[mode].keys[number] = {append_multiply_buffer, number}
+    end
+  end
+
   -- Global Keys
   -- window commands
   keys['cw'] = {
@@ -83,16 +107,17 @@ function M.use_vim_modes(keys)
         g = buffer.document_start,
         },
       G  = buffer.document_end,
-      j  = buffer.line_down,
-      k  = buffer.line_up,
-      l  = buffer.char_right,
-      h  = buffer.char_left,
-      w  = buffer.word_right,
-      b  = buffer.word_left,
-      e  = buffer.word_right_end,
+      j  = {multiply_action, buffer.line_down},
+      k  = {multiply_action, buffer.line_up},
+      l  = {multiply_action, buffer.char_right},
+      h  = {multiply_action, buffer.char_left},
+      w  = {multiply_action, buffer.word_right},
+      b  = {multiply_action, buffer.word_left},
+      e  = {multiply_action, buffer.word_right_end},
       ['$'] = buffer.line_end,
       }
   }
+  add_multiply_bindings("normal")
   
   -- Insert Mode
   modes['insert'] = {
@@ -120,13 +145,13 @@ function M.use_vim_modes(keys)
         g = buffer.document_start_extend,
         },
       G  = buffer.document_end_extend,
-      j  = buffer.line_down_extend,
-      k  = buffer.line_up_extend,
-      l  = buffer.char_right_extend,
-      h  = buffer.char_left_extend,
-      w  = buffer.word_right_extend,
-      b  = buffer.word_left_extend,
-      e  = buffer.word_right_end_extend,
+      j  = {multiply_action, buffer.line_down_extend},
+      k  = {multiply_action, buffer.line_up_extend},
+      l  = {multiply_action, buffer.char_right_extend},
+      h  = {multiply_action, buffer.char_left_extend},
+      w  = {multiply_action, buffer.word_right_extend},
+      b  = {multiply_action, buffer.word_left_extend},
+      e  = {multiply_action, buffer.word_right_end_extend},
       ['$'] = buffer.line_end_extend,
     }
   }
@@ -136,13 +161,13 @@ function M.use_vim_modes(keys)
     ignore_defaults = true,
     keys = {
       ['esc'] = { modes.switch, modes, 'normal'},
-      j  = buffer.line_down_rect_extend,
-      k  = buffer.line_up_rect_extend,
-      l  = buffer.char_right_rect_extend,
-      h  = buffer.char_left_rect_extend,
-      w  = buffer.word_right_rect_extend,
-      b  = buffer.word_left_rect_extend,
-      e  = buffer.word_right_end_rect_extend,
+      j  = {multiply_action, buffer.line_down_rect_extend},
+      k  = {multiply_action, buffer.line_up_rect_extend},
+      l  = {multiply_action, buffer.char_right_rect_extend},
+      h  = {multiply_action, buffer.char_left_rect_extend},
+      w  = {multiply_action, buffer.word_right_rect_extend},
+      b  = {multiply_action, buffer.word_left_rect_extend},
+      e  = {multiply_action, buffer.word_right_end_rect_extend},
       ['$'] = buffer.line_end_rect_extend,
     }
   }
