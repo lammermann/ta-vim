@@ -32,6 +32,8 @@ function M.use_vim_modes(keys)
 
   function modes.switch(self, mode)
     self._cur = self[mode]
+    buffer.caret_style =
+      self._cur.caret_style or _SCINTILLA.constants.CARETSTYLE_LINE
   end
 
   function modes.__index(self, key)
@@ -93,6 +95,7 @@ function M.use_vim_modes(keys)
   -- Normal Mode
   modes['normal'] = {
     ignore_defaults = true,
+    caret_style = _SCINTILLA.constants.CARETSTYLE_BLOCK,
     keys = {
       -- other modes
       i  = { modes.switch, modes, 'insert'},
