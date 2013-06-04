@@ -1,4 +1,4 @@
--- Copyright 2012 Benjamin Kober k.o.b.e.r(att)web(dot)de. See LICENSE.
+-- Copyright 2012 Benjamin Kober k.o.b.e.r(at)web(dot)de. See LICENSE.
 require 'textadept'
 editing = require 'textadept.editing'
 
@@ -15,25 +15,25 @@ local M = {}
 -- Defines modes for keybindings like in vim.
 --
 -- It can be used this way:
--- 
+--
 -- vim = require 'vim'
 -- keys = vim.use_vim_modes(keys)
 --]]
 
 function M.use_vim_modes(keys)
   local modes = {}
-  
+
   modes._keys = {}
   modes._cur = {}
-  
+
   for key,val in pairs(keys) do
     modes._keys[key] = val
   end
-  
+
   function modes.switch(self, mode)
     self._cur = self[mode]
   end
-  
+
   function modes.__index(self, key)
     val = modes._cur.keys[key]
     if val == nil then
@@ -44,8 +44,10 @@ function M.use_vim_modes(keys)
     end
     return val
   end
- 
+
   M.multiply = ''
+
+  -- {{{ helper functions
 
   -- perform `action` for `M.multiply` times
   local function multiply_action(action, ...)
@@ -69,6 +71,8 @@ function M.use_vim_modes(keys)
     end
   end
 
+  -- }}}
+
   -- Global Keys
   -- window commands
   keys['cw'] = {
@@ -85,13 +89,32 @@ function M.use_vim_modes(keys)
       --h = TODO
   }
   keys['cv'] = nil -- Workaround for visual block mode
-  
+
   -- Normal Mode
   modes['normal'] = {
     ignore_defaults = true,
     keys = {
       -- other modes
       i  = { modes.switch, modes, 'insert'},
+      I  = function()
+        buffer.home()
+        modes:switch('insert')
+      end,
+      O  = function()
+        buffer.line_up()
+        buffer.line_end()
+        buffer.new_line()
+        modes:switch('insert')
+      end,
+      o  = function()
+        buffer.line_end()
+        buffer.new_line()
+        modes:switch('insert')
+      end,
+      A  = function()
+        buffer.line_end()
+        modes:switch('insert')
+      end,
       R  = function()
         modes:switch('replace')
         buffer:edit_toggle_overtype()
@@ -115,17 +138,18 @@ function M.use_vim_modes(keys)
       b  = {multiply_action, buffer.word_left},
       e  = {multiply_action, buffer.word_right_end},
       ['$'] = buffer.line_end,
+      --0 = buffer.home,
       }
   }
   add_multiply_bindings("normal")
-  
+
   -- Insert Mode
   modes['insert'] = {
     keys = {
       ['esc'] = { modes.switch, modes, 'normal'}
     }
   }
-  
+
   -- Replace Mode
   modes['replace'] = {
     keys = {
@@ -135,7 +159,7 @@ function M.use_vim_modes(keys)
     end,
     }
   }
-  
+
   -- Visual Mode
   modes['visual'] = {
     ignore_defaults = true,
@@ -155,7 +179,7 @@ function M.use_vim_modes(keys)
       ['$'] = buffer.line_end_extend,
     }
   }
-  
+
   -- Visual Block Mode
   modes['visual_block'] = {
     ignore_defaults = true,
@@ -171,7 +195,7 @@ function M.use_vim_modes(keys)
       ['$'] = buffer.line_end_rect_extend,
     }
   }
-  
+
   -- Visual Line Mode
   modes['visual_line'] = {
     ignore_defaults = true,
@@ -179,7 +203,7 @@ function M.use_vim_modes(keys)
       ['esc'] = { modes.switch, modes, 'normal'},
     }
   }
-  
+
   -- initialize modul
   modes:switch('normal')
   setmetatable(keys, modes)
@@ -201,9 +225,8 @@ function M.bind_key(mode, key, fun, remove_old)
     end
   elseif type(mt[key]) == 'table' then
     local t = mt[key]
-    mt[key] = function()
-      fun()
-      -- t[0](t[1:]) TODO
+    for k,v in pairs(t) do
+      M.bind_key(mode, key, v, false)
     end
   end
 end
