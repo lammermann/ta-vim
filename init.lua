@@ -125,6 +125,7 @@ function M.use_vim_modes(keys)
       v  = { modes.switch, modes, 'visual'},
       cv = { modes.switch, modes, 'visual_block'},
       sv = { modes.switch, modes, 'visual_line'},
+      [':'] = gui.command_entry.focus,
       -- undo / redo
       u  = buffer.undo,
       cr = buffer.redo,
