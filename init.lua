@@ -143,6 +143,22 @@ function M.use_vim_modes(keys)
       e  = {multiply_action, buffer.word_right_end},
       ['$'] = buffer.line_end,
       --0 = buffer.home,
+      -- cut, copy, paste
+      d  = {
+        d = buffer.line_cut,
+        l = function()
+          buffer:hide_selection(true)
+          buffer.char_right_extend()
+          buffer.cut()
+          buffer:hide_selection(false)
+        end,
+        h = function()
+          buffer:hide_selection(true)
+          buffer.char_left_extend()
+          buffer.cut()
+          buffer:hide_selection(false)
+        end,
+      },
       }
   }
   add_multiply_bindings("normal")
@@ -181,6 +197,11 @@ function M.use_vim_modes(keys)
       b  = {multiply_action, buffer.word_left_extend},
       e  = {multiply_action, buffer.word_right_end_extend},
       ['$'] = buffer.line_end_extend,
+      -- cut
+      d = function()
+        buffer.cut()
+        modes:switch('normal')
+      end,
     }
   }
 
@@ -197,6 +218,11 @@ function M.use_vim_modes(keys)
       b  = {multiply_action, buffer.word_left_rect_extend},
       e  = {multiply_action, buffer.word_right_end_rect_extend},
       ['$'] = buffer.line_end_rect_extend,
+      -- cut
+      d = function()
+        buffer.cut()
+        modes:switch('normal')
+      end,
     }
   }
 
