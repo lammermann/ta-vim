@@ -27,28 +27,7 @@ end
 
 function M.use_vim_modes(keys)
 
-  events.connect(events.UPDATE_UI, function()
-    if keys.MODE == 'normal' then
-      buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_BLOCK
-    elseif keys.MODE == 'replace' then
-      gui.statusbar_text = '-- REPLACE --'
-      buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
-    elseif keys.MODE == 'visual' then
-      gui.statusbar_text = '-- VISUAL --'
-      buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
-    elseif keys.MODE == 'visual_block' then
-      gui.statusbar_text = '-- VISUAL BLOCK --'
-      buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
-    elseif keys.MODE == 'visual_line' then
-      gui.statusbar_text = '-- VISUAL LINE --'
-      buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
-    else
-      gui.statusbar_text = '-- INSERT --'
-      buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
-    end
-  end)
-
-  events.connect("VIM_SWITCH_MODE", function()
+  local function on_update_ui()
     if keys.MODE == 'normal' then
       gui.statusbar_text = ''
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_BLOCK
@@ -68,10 +47,29 @@ function M.use_vim_modes(keys)
       gui.statusbar_text = '-- INSERT --'
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
     end
-  end)
+  end
+
+  events.connect(events.UPDATE_UI, on_update_ui)
+  events.connect("VIM_SWITCH_MODE", on_update_ui)
 
   -- {{{ helper functions
 
+  -- ignore default keys
+  M._ignore_defaults = {}
+
+  for key,val in pairs(keys) do
+    M._ignore_defaults[key] = val
+  end
+
+  M._ignore_defaults.__index = function(self, key)
+    val = M._ignore_defaults[key]
+    if val == nil then
+      return do_nothing
+    end
+    return val
+  end
+
+  -- add multiply bindings
   M.multiply = ''
 
   -- perform `action` for `M.multiply` times
@@ -99,7 +97,7 @@ function M.use_vim_modes(keys)
   -- }}}
 
   -- Global Keys
-  keys['esc'] = function() keys.MODE = 'normal' end
+  keys['esc'] = M.mode_switch
 
   -- window commands
   keys['cw'] = {
@@ -151,7 +149,7 @@ function M.use_vim_modes(keys)
     v  = { M.mode_switch, "visual" },
     cv = { M.mode_switch, "visual_block" },
     V  = { M.mode_switch, "visual_line" },
-    [':'] = gui.command_entry.focus,
+    [':'] = { gui.command_entry.enter_mode, "vim_command" },
     -- undo / redo
     u  = buffer.undo,
     cr = buffer.redo,
@@ -214,6 +212,14 @@ function M.use_vim_modes(keys)
       }
     }
   add_multiply_bindings("normal")
+  setmetatable(keys.normal, M._ignore_defaults)
+
+  -- vim command entry
+  keys.vim_command = {
+    ["\t"] = gui.command_entry.complete_lua, -- TODO vim complete
+    ["\n"] = { gui.command_entry.finish,
+      gui.command_entry.execute_lua }, -- TODO vim execution
+  }
 
   -- Visual Mode
   keys.visual = {
@@ -236,6 +242,7 @@ function M.use_vim_modes(keys)
       M.mode_switch("normal")
     end,
   }
+  setmetatable(keys.visual, M._ignore_defaults)
 
   -- Visual Block Mode
   keys.visual_block = {
@@ -254,11 +261,13 @@ function M.use_vim_modes(keys)
       M.mode_switch("normal")
     end,
   }
+  setmetatable(keys.visual_block, M._ignore_defaults)
 
   -- Visual Line Mode
   keys.visual_line = {
     ['esc'] = { M.mode_switch, "normal" },
   }
+  setmetatable(keys.visual_line, M._ignore_defaults)
 
   -- Replace Mode
   keys.replace = {
@@ -273,25 +282,6 @@ function M.use_vim_modes(keys)
 
   return keys
 
-end
-
-function M.bind_key(mode, key, fun, remove_old)
-  remove_old = remove_old or false
-  local mt = M._modes[mode] or {}
-  if mt[key] == nil or remove_old then
-    mt[key] = fun
-  elseif type(mt[key]) == 'function' then
-    local fn = mt[key]
-    mt[key] = function()
-      fun()
-      fn()
-    end
-  elseif type(mt[key]) == 'table' then
-    local t = mt[key]
-    for k,v in pairs(t) do
-      M.bind_key(mode, key, v, false)
-    end
-  end
 end
 
 return M
