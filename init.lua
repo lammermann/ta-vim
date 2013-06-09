@@ -50,7 +50,18 @@ function M.use_vim_modes(keys)
   end
 
   events.connect(events.UPDATE_UI, on_update_ui)
-  events.connect("VIM_SWITCH_MODE", on_update_ui)
+  events.connect("VIM_SWITCH_MODE", function()
+    if keys.MODE == 'visual' then
+      buffer.selection_mode = _SCINTILLA.constants.SC_SEL_STREAM
+    elseif keys.MODE == 'visual_line' then
+      buffer.selection_mode = _SCINTILLA.constants.SC_SEL_LINES
+    else
+      local pos = buffer.current_pos
+      buffer:cancel()
+      buffer:goto_pos(pos)
+    end
+    on_update_ui()
+  end)
 
   -- {{{ helper functions
 
@@ -97,7 +108,7 @@ function M.use_vim_modes(keys)
   -- }}}
 
   -- Global Keys
-  keys['esc'] = M.mode_switch
+  keys['esc'] = { M.mode_switch, "normal" }
 
   -- window commands
   keys['cw'] = {
@@ -114,6 +125,43 @@ function M.use_vim_modes(keys)
       --h = TODO
   }
   keys['cv'] = nil -- Workaround for visual block mode
+
+  -- movement commands
+  M._movements = {
+    g  = {
+      g = buffer.document_start,
+      },
+    G  = function()
+      if M.multiply == '' then
+        buffer:document_end()
+      else
+        buffer:goto_line(tonumber(M.multiply) - 1)
+        M.multiply = ''
+      end
+    end,
+    j  = {multiply_action, buffer.line_down},
+    k  = {multiply_action, buffer.line_up},
+    l  = {multiply_action, buffer.char_right},
+    h  = {multiply_action, buffer.char_left},
+    w  = {multiply_action, buffer.word_right},
+    b  = {multiply_action, buffer.word_left},
+    e  = {multiply_action, buffer.word_right_end},
+    ['$'] = buffer.line_end,
+    ['0']  = function()
+      if M.multiply == '' then
+        return buffer:home()
+      end
+      append_multiply_buffer('0')
+    end,
+    ['esc'] = function() M.multiply = '' end,
+  }
+  for i = 1, 9 do
+    number = tostring(i)
+    M._movements[number] = {append_multiply_buffer, number}
+  end
+  M._movements.__index = M._movements
+
+  setmetatable(M._movements, M._ignore_defaults)
 
   -- Normal Mode
   keys.normal = {
@@ -153,27 +201,6 @@ function M.use_vim_modes(keys)
     -- undo / redo
     u  = buffer.undo,
     cr = buffer.redo,
-    -- movement
-    g  = {
-      g = buffer.document_start,
-      },
-    G  = function()
-      if M.multiply == '' then
-        buffer:document_end()
-      else
-        buffer:goto_line(tonumber(M.multiply) - 1)
-        M.multiply = ''
-      end
-    end,
-    j  = {multiply_action, buffer.line_down},
-    k  = {multiply_action, buffer.line_up},
-    l  = {multiply_action, buffer.char_right},
-    h  = {multiply_action, buffer.char_left},
-    w  = {multiply_action, buffer.word_right},
-    b  = {multiply_action, buffer.word_left},
-    e  = {multiply_action, buffer.word_right_end},
-    ['$'] = buffer.line_end,
-    --0 = buffer.home,
     -- cut, copy, paste
     d  = {
       d = buffer.line_cut,
@@ -211,8 +238,7 @@ function M.use_vim_modes(keys)
       end,
       }
     }
-  add_multiply_bindings("normal")
-  setmetatable(keys.normal, M._ignore_defaults)
+  setmetatable(keys.normal, M._movements)
 
   -- vim command entry
   keys.vim_command = {
@@ -224,25 +250,13 @@ function M.use_vim_modes(keys)
   -- Visual Mode
   keys.visual = {
     ['esc'] = { M.mode_switch, "normal" },
-    g  = {
-      g = buffer.document_start_extend,
-      },
-    G  = buffer.document_end_extend,
-    j  = {multiply_action, buffer.line_down_extend},
-    k  = {multiply_action, buffer.line_up_extend},
-    l  = {multiply_action, buffer.char_right_extend},
-    h  = {multiply_action, buffer.char_left_extend},
-    w  = {multiply_action, buffer.word_right_extend},
-    b  = {multiply_action, buffer.word_left_extend},
-    e  = {multiply_action, buffer.word_right_end_extend},
-    ['$'] = buffer.line_end_extend,
     -- cut
     d = function()
       buffer.cut()
       M.mode_switch("normal")
     end,
   }
-  setmetatable(keys.visual, M._ignore_defaults)
+  setmetatable(keys.visual, M._movements)
 
   -- Visual Block Mode
   keys.visual_block = {
@@ -261,13 +275,13 @@ function M.use_vim_modes(keys)
       M.mode_switch("normal")
     end,
   }
-  setmetatable(keys.visual_block, M._ignore_defaults)
+  setmetatable(keys.visual_block, M._movements)
 
   -- Visual Line Mode
   keys.visual_line = {
     ['esc'] = { M.mode_switch, "normal" },
   }
-  setmetatable(keys.visual_line, M._ignore_defaults)
+  setmetatable(keys.visual_line, M._movements)
 
   -- Replace Mode
   keys.replace = {
