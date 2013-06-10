@@ -63,10 +63,42 @@ function M.use_vim_modes(keys)
     on_update_ui()
   end)
 
+  -- {{{ Global Keys
+  -- have to be set before the _ignore_defaults table
+  keys['esc'] = { M.mode_switch, "normal" }
+
+  -- window commands
+  keys['cw'] = {
+      s = { view.split, view },
+      v = { view.split, view, true },
+      c = { view.unsplit, view },
+      ['\t']  = { gui.goto_view, 1, true },
+      ['s\t'] = { gui.goto_view, -1, true },
+      o = function() while view:unsplit() do end end,
+      ['>'] = function() if view.size then view.size = view.size + 10 end end,
+      ['<'] = function() if view.size then view.size = view.size - 10 end end,
+      ['+'] = function() if view.size then view.size = view.size + 10 end end,
+      ['-'] = function() if view.size then view.size = view.size - 10 end end,
+      --['='] = TODO
+      --j = TODO
+      --k = TODO
+      --l = TODO
+      --h = TODO
+  }
+  keys['cv'] = nil -- Workaround for visual block mode
+
+  -- }}}
+
   -- {{{ helper functions
 
   -- ignore default keys
-  M._ignore_defaults = {}
+  M._ignore_defaults = {
+    down  = buffer.line_down,
+    up    = buffer.line_up,
+    left  = buffer.char_left,
+    right = buffer.char_right,
+    ['end'] = buffer.line_end,
+  }
 
   for key,val in pairs(keys) do
     M._ignore_defaults[key] = val
@@ -107,25 +139,6 @@ function M.use_vim_modes(keys)
 
   -- }}}
 
-  -- Global Keys
-  keys['esc'] = { M.mode_switch, "normal" }
-
-  -- window commands
-  keys['cw'] = {
-      s = { view.split, view },
-      v = { view.split, view, true },
-      c = { view.unsplit, view },
-      ['\t']  = { gui.goto_view, 1, true },
-      ['s\t'] = { gui.goto_view, -1, true },
-      --o = utils.unsplit_all,
-      --['='] = TODO
-      --j = TODO
-      --k = TODO
-      --l = TODO
-      --h = TODO
-  }
-  keys['cv'] = nil -- Workaround for visual block mode
-
   -- movement commands
   M._movements = {
     g  = {
@@ -146,6 +159,7 @@ function M.use_vim_modes(keys)
     w  = {multiply_action, buffer.word_right},
     b  = {multiply_action, buffer.word_left},
     e  = {multiply_action, buffer.word_right_end},
+    ['%'] = editing.match_brace,
     ['$'] = buffer.line_end,
     ['0']  = function()
       if M.multiply == '' then
@@ -226,6 +240,29 @@ function M.use_vim_modes(keys)
         buffer:line_cut()
       end,
     },
+    y  = {
+      y = buffer.line_copy,
+      l = function()
+        buffer:hide_selection(true)
+        buffer.char_right_extend()
+        buffer:copy()
+        buffer:hide_selection(false)
+      end,
+      h = function()
+        buffer:hide_selection(true)
+        buffer.char_left_extend()
+        buffer.copy()
+        buffer:hide_selection(false)
+      end,
+    },
+    p = {
+      p = buffer.paste,
+      P = function()
+        buffer:line_up()
+        buffer:paste()
+        buffer:line_down()
+      end,
+    },
     -- folds
     z = {
       c = function()
@@ -250,9 +287,17 @@ function M.use_vim_modes(keys)
   -- Visual Mode
   keys.visual = {
     ['esc'] = { M.mode_switch, "normal" },
-    -- cut
+    -- cut, copy, paste
     d = function()
       buffer.cut()
+      M.mode_switch("normal")
+    end,
+    y = function()
+      buffer.copy()
+      M.mode_switch("normal")
+    end,
+    p = function()
+      buffer.paste()
       M.mode_switch("normal")
     end,
   }
@@ -269,9 +314,17 @@ function M.use_vim_modes(keys)
     b  = {multiply_action, buffer.word_left_rect_extend},
     e  = {multiply_action, buffer.word_right_end_rect_extend},
     ['$'] = buffer.line_end_rect_extend,
-    -- cut
+    -- cut, copy, paste
     d = function()
       buffer.cut()
+      M.mode_switch("normal")
+    end,
+    y = function()
+      buffer.copy()
+      M.mode_switch("normal")
+    end,
+    p = function()
+      buffer.paste()
       M.mode_switch("normal")
     end,
   }
@@ -288,6 +341,19 @@ function M.use_vim_modes(keys)
     ['esc']  = function()
       M.mode_switch("normal")
       buffer:edit_toggle_overtype()
+    end,
+    -- cut, copy, paste
+    d = function()
+      buffer.cut()
+      M.mode_switch("normal")
+    end,
+    y = function()
+      buffer.copy()
+      M.mode_switch("normal")
+    end,
+    p = function()
+      buffer.paste()
+      M.mode_switch("normal")
     end,
   }
 
