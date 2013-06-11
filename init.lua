@@ -67,6 +67,21 @@ function M.use_vim_modes(keys)
   -- have to be set before the _ignore_defaults table
   keys['esc'] = { M.mode_switch, "normal" }
 
+  local function table2str(t)
+    local out = "{ \n"
+    for k,v in pairs(t) do
+      out = out .. tostring(k) .. " = "
+      if type(v) == "table" then
+        out = out .. table2str(v)
+      else
+        out = out .. tostring(v)
+      end
+      out = out .. ",\n"
+    end
+    out = out .. "}\n"
+    return out
+  end
+
   -- window commands
   keys['cw'] = {
       s = { view.split, view },
@@ -74,6 +89,9 @@ function M.use_vim_modes(keys)
       c = { view.unsplit, view },
       ['\t']  = { gui.goto_view, 1, true },
       ['s\t'] = { gui.goto_view, -1, true },
+      t = function()
+        print(table2str(gui.get_split_table()))
+      end,
       o = function() while view:unsplit() do end end,
       ['>'] = function() if view.size then view.size = view.size + 10 end end,
       ['<'] = function() if view.size then view.size = view.size - 10 end end,
