@@ -109,27 +109,6 @@ function M.use_vim_modes(keys)
 
   -- {{{ helper functions
 
-  -- ignore default keys
-  M._ignore_defaults = {
-    down  = buffer.line_down,
-    up    = buffer.line_up,
-    left  = buffer.char_left,
-    right = buffer.char_right,
-    ['end'] = buffer.line_end,
-  }
-
-  for key,val in pairs(keys) do
-    M._ignore_defaults[key] = val
-  end
-
-  M._ignore_defaults.__index = function(self, key)
-    val = M._ignore_defaults[key]
-    if val == nil then
-      return do_nothing
-    end
-    return val
-  end
-
   -- add multiply bindings
   M.multiply = ''
 
@@ -153,6 +132,27 @@ function M.use_vim_modes(keys)
       number = tostring(i)
       keys[mode][number] = {append_multiply_buffer, number}
     end
+  end
+
+  -- ignore default keys
+  M._ignore_defaults = {
+    down  = { multiply_action, buffer.line_down },
+    up    = { multiply_action, buffer.line_up },
+    left  = { multiply_action, buffer.char_left },
+    right = { multiply_action, buffer.char_right },
+    ['end'] = { multiply_action, buffer.line_end },
+  }
+
+  for key,val in pairs(keys) do
+    M._ignore_defaults[key] = val
+  end
+
+  M._ignore_defaults.__index = function(self, key)
+    val = M._ignore_defaults[key]
+    if val == nil then
+      return do_nothing
+    end
+    return val
   end
 
   -- }}}
@@ -230,10 +230,24 @@ function M.use_vim_modes(keys)
     cv = { M.mode_switch, "visual_block" },
     V  = { M.mode_switch, "visual_line" },
     [':'] = { gui.command_entry.enter_mode, "vim_command" },
+    -- modify content
+    ['~'] = { multiply_action, function()
+      buffer:set_selection(buffer.current_pos, buffer.current_pos+1)
+      local c = buffer.get_sel_text()
+      local newc = string.upper(c)
+      if newc == c then newc = string.lower(c) end
+      buffer.replace_sel(newc)
+    end },
     -- undo / redo
     u  = buffer.undo,
     cr = buffer.redo,
     -- cut, copy, paste
+    x  = function()
+      buffer:hide_selection(true)
+      buffer.char_right_extend()
+      buffer.cut()
+      buffer:hide_selection(false)
+    end,
     d  = {
       d = buffer.line_cut,
       l = function()
@@ -291,8 +305,8 @@ function M.use_vim_modes(keys)
         local line, num = buffer.get_cur_line()
         buffer:fold_children(num, _SCINTILLA.constants.SC_FOLDACTION_EXPAND)
       end,
-      }
     }
+  }
   setmetatable(keys.normal, M._movements)
 
   -- vim command entry
