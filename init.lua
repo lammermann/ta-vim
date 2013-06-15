@@ -298,7 +298,7 @@ function M.use_vim_modes(keys)
   -- vim command entry
   keys.vim_command = {
     ["\t"] = gui.command_entry.complete_lua, -- TODO vim complete
-    ["\n"] = { gui.command_entry.finish,
+    ["\n"] = { gui.command_entry.finish_mode,
       gui.command_entry.execute_lua }, -- TODO vim execution
   }
 
