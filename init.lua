@@ -82,11 +82,46 @@ function M.use_vim_modes(keys)
     return out
   end
 
+  local function unsplit_other(ts)
+      if ts.vertical == nil then
+          -- Ensure this view is focused (so we don't delete the focused view)
+          for k,v in ipairs(_G._VIEWS) do
+              if ts == v then
+                  gui.goto_view(k)
+                  break
+              end
+          end
+          view.unsplit(ts)
+      else
+          unsplit_other(ts[1])
+      end
+  end
+  
+  local function close_view(v, ts)
+      local v = view
+      local ts = ts or gui.get_split_table()
+  
+      if ts.vertical == nil then
+          -- This is just a view
+          return false
+      else
+          if ts[1] == v then
+              -- We can't quite just close the current view. Pick the first
+              -- on the other side.
+              return unsplit_other(ts[2])
+          else if ts[2] == v then
+              return unsplit_other(ts[1])
+          else
+              return close_view(v, ts[1]) or close_view(v, ts[2])
+          end end
+      end
+  end
+
   -- window commands
   keys['cw'] = {
       s = { view.split, view },
       v = { view.split, view, true },
-      c = { view.unsplit, view },
+      c = { close_view, view },
       ['\t']  = { gui.goto_view, 1, true },
       ['s\t'] = { gui.goto_view, -1, true },
       t = function()
