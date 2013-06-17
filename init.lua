@@ -67,54 +67,86 @@ function M.use_vim_modes(keys)
   -- have to be set before the _ignore_defaults table
   keys['esc'] = { M.mode_switch, "normal" }
 
-  local function table2str(t)
-    local out = "{ \n"
-    for k,v in pairs(t) do
-      out = out .. tostring(k) .. " = "
-      if type(v) == "table" then
-        out = out .. table2str(v)
-      else
-        out = out .. tostring(v)
-      end
-      out = out .. ",\n"
-    end
-    out = out .. "}\n"
-    return out
-  end
-
   local function unsplit_other(ts)
-      if ts.vertical == nil then
-          -- Ensure this view is focused (so we don't delete the focused view)
-          for k,v in ipairs(_G._VIEWS) do
-              if ts == v then
-                  gui.goto_view(k)
-                  break
-              end
-          end
-          view.unsplit(ts)
-      else
-          unsplit_other(ts[1])
+    if ts.vertical == nil then
+      -- Ensure this view is focused (so we don't delete the focused view)
+      for k,v in ipairs(_G._VIEWS) do
+        if ts == v then
+          gui.goto_view(k)
+          break
+        end
       end
+      view.unsplit(ts)
+    else
+      unsplit_other(ts[1])
+    end
   end
   
   local function close_view(v, ts)
-      local v = view
-      local ts = ts or gui.get_split_table()
+    local v = view
+    local ts = ts or gui.get_split_table()
   
-      if ts.vertical == nil then
-          -- This is just a view
-          return false
+    if ts.vertical == nil then
+      -- This is just a view
+      return false
+    else
+      if ts[1] == v then
+        -- We can't quite just close the current view. Pick the first
+        -- on the other side.
+        return unsplit_other(ts[2])
+      elseif ts[2] == v then
+        return unsplit_other(ts[1])
       else
-          if ts[1] == v then
-              -- We can't quite just close the current view. Pick the first
-              -- on the other side.
-              return unsplit_other(ts[2])
-          else if ts[2] == v then
-              return unsplit_other(ts[1])
-          else
-              return close_view(v, ts[1]) or close_view(v, ts[2])
-          end end
+        return close_view(v, ts[1]) or close_view(v, ts[2])
       end
+    end
+  end
+
+  local function move_to_view(v, direction, ts, left, right, above, under)
+    local v = view
+    local ts = ts or gui.get_split_table()
+    local l = left  or v
+    local r = right or v
+    local a = above or v
+    local u = under or v
+
+    if ts.vertical == nil then
+      -- This is just a view
+      return false
+    elseif ts.vertical == true then
+      if ts[1] ~= v then l = ts[1] end
+      if ts[2] ~= v then r = ts[2] end
+    elseif ts.vertical == false then
+      if ts[1] ~= v then a = ts[1] end
+      if ts[2] ~= v then u = ts[2] end
+    end
+
+    if ts[1] == v or ts[2] == v then
+      if direction == "right" then
+        while r.vertical ~= nil do
+          r = r[1]
+        end
+        return gui.goto_view(_G._VIEWS[r])
+      elseif direction == "left" then
+        while l.vertical ~= nil do
+          l = l[2]
+        end
+        return gui.goto_view(_G._VIEWS[l])
+      elseif direction == "above" then
+        while a.vertical ~= nil do
+          a = a[2]
+        end
+        return gui.goto_view(_G._VIEWS[a])
+      elseif direction == "under" then
+        while u.vertical ~= nil do
+          u = u[1]
+        end
+        return gui.goto_view(_G._VIEWS[u])
+      end
+    else
+      return move_to_view(v, direction, ts[1], l, r, a, u)
+        or move_to_view(v, direction, ts[2], l, r, a, u)
+    end
   end
 
   -- window commands
@@ -124,19 +156,16 @@ function M.use_vim_modes(keys)
       c = { close_view, view },
       ['\t']  = { gui.goto_view, 1, true },
       ['s\t'] = { gui.goto_view, -1, true },
-      t = function()
-        print(table2str(gui.get_split_table()))
-      end,
       o = function() while view:unsplit() do end end,
       ['>'] = function() if view.size then view.size = view.size + 10 end end,
       ['<'] = function() if view.size then view.size = view.size - 10 end end,
       ['+'] = function() if view.size then view.size = view.size + 10 end end,
       ['-'] = function() if view.size then view.size = view.size - 10 end end,
-      --['='] = TODO
-      --j = TODO
-      --k = TODO
-      --l = TODO
-      --h = TODO
+      --['='] = TODO,
+      j = { move_to_view, view, "under" },
+      k = { move_to_view, view, "above" },
+      l = { move_to_view, view, "right" },
+      h = { move_to_view, view, "left" },
   }
   keys['cv'] = nil -- Workaround for visual block mode
 
