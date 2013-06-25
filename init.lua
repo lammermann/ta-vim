@@ -294,6 +294,7 @@ function M.use_vim_modes(keys)
     cv = { M.mode_switch, "visual_block" },
     V  = { M.mode_switch, "visual_line" },
     [':'] = { gui.command_entry.enter_mode, "vim_command" },
+    ['/'] = gui.find.find_incremental,
     -- modify content
     ['~'] = { multiply_action, function()
       buffer:set_selection(buffer.current_pos, buffer.current_pos+1)
@@ -376,8 +377,13 @@ function M.use_vim_modes(keys)
   -- vim command entry
   keys.vim_command = {
     ["\t"] = gui.command_entry.complete_lua, -- TODO vim complete
-    ["\n"] = { gui.command_entry.finish_mode,
-      gui.command_entry.execute_lua }, -- TODO vim execution
+    ["\n"] = function()
+      M.mode_switch("normal")
+      if CURSES then keys.clear_key_sequence() end
+      gui.command_entry.focus()
+      gui.command_entry.execute_lua(gui.command_entry.entry_text)
+      if CURSES then return false end -- propagate to exit CDK entry on Enter
+    end, -- TODO vim execution
   }
 
   -- Visual Mode
