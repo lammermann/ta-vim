@@ -2,6 +2,8 @@
 require 'textadept'
 editing = require 'textadept.editing'
 
+local P, R, Cs = lpeg.P, lpeg.R, lpeg.Cs
+
 -- dummy function replace key insertion
 local function do_nothing()
   return -- don't do anything. Just prevent other actions
@@ -375,13 +377,19 @@ function M.use_vim_modes(keys)
   setmetatable(keys.normal, M._movements)
 
   -- vim command entry
+  cmd_pattern = P("q") / "quit()" 
+    + P("w") / "save()"
+    + Cs( P"" / ""
+      )
+
   keys.vim_command = {
     ["\t"] = gui.command_entry.complete_lua, -- TODO vim complete
     ["\n"] = function()
       M.mode_switch("normal")
       if CURSES then keys.clear_key_sequence() end
       gui.command_entry.focus()
-      gui.command_entry.execute_lua(gui.command_entry.entry_text)
+      local text = cmd_pattern:match(gui.command_entry.entry_text)
+      gui.command_entry.execute_lua(text)
       if CURSES then return false end -- propagate to exit CDK entry on Enter
     end, -- TODO vim execution
   }
