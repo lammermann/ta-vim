@@ -31,22 +31,22 @@ function M.use_vim_modes(keys)
 
   local function on_update_ui()
     if keys.MODE == 'normal' then
-      gui.statusbar_text = ''
+      ui.statusbar_text = ''
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_BLOCK
     elseif keys.MODE == 'replace' then
-      gui.statusbar_text = '-- REPLACE --'
+      ui.statusbar_text = '-- REPLACE --'
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
     elseif keys.MODE == 'visual' then
-      gui.statusbar_text = '-- VISUAL --'
+      ui.statusbar_text = '-- VISUAL --'
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
     elseif keys.MODE == 'visual_block' then
-      gui.statusbar_text = '-- VISUAL BLOCK --'
+      ui.statusbar_text = '-- VISUAL BLOCK --'
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
     elseif keys.MODE == 'visual_line' then
-      gui.statusbar_text = '-- VISUAL LINE --'
+      ui.statusbar_text = '-- VISUAL LINE --'
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
     else
-      gui.statusbar_text = '-- INSERT --'
+      ui.statusbar_text = '-- INSERT --'
       buffer.caret_style = _SCINTILLA.constants.CARETSTYLE_LINE
     end
   end
@@ -74,7 +74,7 @@ function M.use_vim_modes(keys)
       -- Ensure this view is focused (so we don't delete the focused view)
       for k,v in ipairs(_G._VIEWS) do
         if ts == v then
-          gui.goto_view(k)
+          ui.goto_view(k)
           break
         end
       end
@@ -86,7 +86,7 @@ function M.use_vim_modes(keys)
   
   local function close_view(v, ts)
     local v = view
-    local ts = ts or gui.get_split_table()
+    local ts = ts or ui.get_split_table()
   
     if ts.vertical == nil then
       -- This is just a view
@@ -106,7 +106,7 @@ function M.use_vim_modes(keys)
 
   local function move_to_view(v, direction, ts, left, right, above, under)
     local v = view
-    local ts = ts or gui.get_split_table()
+    local ts = ts or ui.get_split_table()
     local l = left  or v
     local r = right or v
     local a = above or v
@@ -128,22 +128,22 @@ function M.use_vim_modes(keys)
         while r.vertical ~= nil do
           r = r[1]
         end
-        return gui.goto_view(_G._VIEWS[r])
+        return ui.goto_view(_G._VIEWS[r])
       elseif direction == "left" then
         while l.vertical ~= nil do
           l = l[2]
         end
-        return gui.goto_view(_G._VIEWS[l])
+        return ui.goto_view(_G._VIEWS[l])
       elseif direction == "above" then
         while a.vertical ~= nil do
           a = a[2]
         end
-        return gui.goto_view(_G._VIEWS[a])
+        return ui.goto_view(_G._VIEWS[a])
       elseif direction == "under" then
         while u.vertical ~= nil do
           u = u[1]
         end
-        return gui.goto_view(_G._VIEWS[u])
+        return ui.goto_view(_G._VIEWS[u])
       end
     else
       return move_to_view(v, direction, ts[1], l, r, a, u)
@@ -156,8 +156,8 @@ function M.use_vim_modes(keys)
       s = { view.split, view },
       v = { view.split, view, true },
       c = { close_view, view },
-      ['\t']  = { gui.goto_view, 1, true },
-      ['s\t'] = { gui.goto_view, -1, true },
+      ['\t']  = { ui.goto_view, 1, true },
+      ['s\t'] = { ui.goto_view, -1, true },
       o = function() while view:unsplit() do end end,
       ['>'] = function() if view.size then view.size = view.size + 10 end end,
       ['<'] = function() if view.size then view.size = view.size - 10 end end,
@@ -295,8 +295,8 @@ function M.use_vim_modes(keys)
     v  = { M.mode_switch, "visual" },
     cv = { M.mode_switch, "visual_block" },
     V  = { M.mode_switch, "visual_line" },
-    [':'] = { gui.command_entry.enter_mode, "vim_command" },
-    ['/'] = gui.find.find_incremental,
+    [':'] = { ui.command_entry.enter_mode, "vim_command" },
+    ['/'] = ui.find.find_incremental,
     -- modify content
     ['~'] = { multiply_action, function()
       buffer:set_selection(buffer.current_pos, buffer.current_pos+1)
@@ -383,13 +383,13 @@ function M.use_vim_modes(keys)
       )
 
   keys.vim_command = {
-    ["\t"] = gui.command_entry.complete_lua, -- TODO vim complete
+    ["\t"] = ui.command_entry.complete_lua, -- TODO vim complete
     ["\n"] = function()
       M.mode_switch("normal")
       if CURSES then keys.clear_key_sequence() end
-      gui.command_entry.focus()
-      local text = cmd_pattern:match(gui.command_entry.entry_text)
-      gui.command_entry.execute_lua(text)
+      ui.command_entry.focus()
+      local text = cmd_pattern:match(ui.command_entry.entry_text)
+      ui.command_entry.execute_lua(text)
       if CURSES then return false end -- propagate to exit CDK entry on Enter
     end, -- TODO vim execution
   }
